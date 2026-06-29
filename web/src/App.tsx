@@ -1,122 +1,78 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import { WalletProvider } from "./hooks/useWallet";
+import { ToastProvider } from "./hooks/useToasts";
+import { WalletButton } from "./components/WalletButton";
+import { BalanceCard } from "./components/BalanceCard";
+import { SendXlmCard } from "./components/SendXlmCard";
+import { VaultCard } from "./components/VaultCard";
+import { ActivityFeed } from "./components/ActivityFeed";
+import { Toasts } from "./components/Toasts";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+function Shell() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const bump = () => setRefreshKey((k) => k + 1);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app">
+      <div className="bg-orb bg-orb--1" />
+      <div className="bg-orb bg-orb--2" />
+
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand__mark">◈</span>
+          <div>
+            <div className="brand__name">SpendVault</div>
+            <div className="brand__tag">budget-bound payments for AI agents · Stellar testnet</div>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+        <WalletButton />
+      </header>
+
+      <main className="layout">
+        <section className="hero">
+          <h1 className="hero__title">
+            Give an agent a wallet it <em>can't</em> drain.
+          </h1>
+          <p className="hero__sub">
+            x402 lets agents pay per request — but with no budget, an agent key is a blank
+            cheque. SpendVault is an on-chain allowance: fund it, set a cap, and the agent
+            spends only within policy. Every payout is enforced on Stellar and streamed live.
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="grid">
+          <div className="grid__col">
+            <BalanceCard />
+            <SendXlmCard />
+          </div>
+          <div className="grid__col grid__col--wide">
+            <VaultCard refreshKey={refreshKey} onChange={bump} />
+          </div>
+          <div className="grid__col">
+            <ActivityFeed refreshKey={refreshKey} />
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </main>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <footer className="footer">
+        <span>Stellar Journey to Mastery · White → Orange belt</span>
+        <a href="https://developers.stellar.org/docs/build/agentic-payments/x402" target="_blank" rel="noreferrer">
+          Built around x402 ↗
+        </a>
+      </footer>
+
+      <Toasts />
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <ToastProvider>
+      <WalletProvider>
+        <Shell />
+      </WalletProvider>
+    </ToastProvider>
+  );
+}
