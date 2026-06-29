@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# SpendVault — web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite frontend for the SpendVault agent-payments dApp.
+Design language: "neon-cyber" (Tailwind v4 + oklch tokens, glass + neon accents).
 
-Currently, two official plugins are available:
+## Stack
+- Vite + React 19 + TypeScript
+- `@stellar/stellar-sdk` (RPC + Horizon), `@creit.tech/stellar-wallets-kit` (multi-wallet)
+- Tailwind v4, lucide-react, framer-motion, Geist + Bricolage Grotesque
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Run locally
+```bash
+cp .env.example .env     # contract/network config (testnet)
+pnpm install
+pnpm dev                 # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Requires the [Freighter](https://www.freighter.app/) extension set to **Testnet**.
+
+## Env
+See `.env.example` — `VITE_CONTRACT_ID` (demo vault), `VITE_FACTORY_ID`, `VITE_TOKEN_ID`
+(native XLM SAC), `VITE_RPC_URL`, `VITE_HORIZON_URL`, `VITE_NETWORK_PASSPHRASE`,
+`VITE_READ_SOURCE` (funded account used only to simulate read-only views).
+
+## Structure
+- `src/lib/` — `config`, `wallet` (StellarWalletsKit), `stellar` (balance + XLM send),
+  `contract` (vault calls, factory, event feed), `errors` (friendly mapping).
+- `src/components/` — feature cards + `ui/` primitives.
+- `src/hooks/` — wallet + toast contexts.
+
+## Scripts
+- `pnpm dev` · `pnpm build` (typecheck + bundle) · `pnpm preview`
