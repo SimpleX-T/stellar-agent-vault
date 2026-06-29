@@ -50,5 +50,5 @@ export async function sendXlm(
 
   const signedXdr = await signTx(tx.toXDR(), from);
   const signed = TransactionBuilder.fromXDR(signedXdr, NETWORK_PASSPHRASE);
-  return submitAndConfirm(signed);
+  return (await submitAndConfirm(signed)).hash;
 }

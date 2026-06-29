@@ -7,6 +7,7 @@ export const NETWORK_PASSPHRASE =
   import.meta.env.VITE_NETWORK_PASSPHRASE ?? "Test SDF Network ; September 2015";
 
 export const CONTRACT_ID = import.meta.env.VITE_CONTRACT_ID as string;
+export const FACTORY_ID = import.meta.env.VITE_FACTORY_ID as string;
 export const TOKEN_ID = import.meta.env.VITE_TOKEN_ID as string;
 
 // A funded account used purely as the source for read-only simulation of view calls.

@@ -1,5 +1,8 @@
 // Soroban contract layer: read-only views (simulate), state-changing calls
-// (prepare → sign → submit → confirm), and the live event feed.
+// (prepare → sign → submit → confirm), the VaultFactory, and the live event feed.
+//
+// Every call is parameterized by a vault address so the UI can target either the
+// shared demo vault or a vault the connected wallet created via the factory.
 
 import {
   rpc,
@@ -16,6 +19,8 @@ import {
   RPC_URL,
   NETWORK_PASSPHRASE,
   CONTRACT_ID,
+  FACTORY_ID,
+  TOKEN_ID,
   READ_SOURCE,
 } from "./config";
 import { signTx } from "./wallet";
@@ -26,13 +31,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // ---- argument helpers ----
 const addr = (a: string) => nativeToScVal(a, { type: "address" });
 const i128 = (n: bigint) => nativeToScVal(n, { type: "i128" });
+const u64 = (n: bigint) => nativeToScVal(n, { type: "u64" });
 
 // ---- read-only views ----
 
 /** Simulate a contract call and decode the return value (no signing, no fees). */
-async function readView(method: string, args: xdr.ScVal[] = []): Promise<unknown> {
+async function readView(
+  contractId: string,
+  method: string,
+  args: xdr.ScVal[] = [],
+): Promise<unknown> {
   const account = await server.getAccount(READ_SOURCE);
-  const contract = new Contract(CONTRACT_ID);
+  const contract = new Contract(contractId);
   const tx = new TransactionBuilder(account, {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
@@ -59,17 +69,16 @@ export interface VaultState {
   balance: bigint;
 }
 
-export async function getVaultState(): Promise<VaultState> {
-  const [owner, agent, cap, epochLen, spent, remaining, balance] =
-    await Promise.all([
-      readView("get_owner"),
-      readView("get_agent"),
-      readView("get_cap"),
-      readView("get_epoch_len"),
-      readView("get_spent"),
-      readView("get_remaining"),
-      readView("get_balance"),
-    ]);
+export async function getVaultState(vaultId: string = CONTRACT_ID): Promise<VaultState> {
+  const [owner, agent, cap, epochLen, spent, remaining, balance] = await Promise.all([
+    readView(vaultId, "get_owner"),
+    readView(vaultId, "get_agent"),
+    readView(vaultId, "get_cap"),
+    readView(vaultId, "get_epoch_len"),
+    readView(vaultId, "get_spent"),
+    readView(vaultId, "get_remaining"),
+    readView(vaultId, "get_balance"),
+  ]);
   return {
     owner: owner as string,
     agent: agent as string,
@@ -81,12 +90,25 @@ export async function getVaultState(): Promise<VaultState> {
   };
 }
 
+/** Vault addresses owned by `owner`, per the factory. */
+export async function vaultsOf(owner: string): Promise<string[]> {
+  const res = (await readView(FACTORY_ID, "vaults_of", [addr(owner)])) as
+    | string[]
+    | null;
+  return res ?? [];
+}
+
 // ---- submit helpers (shared with classic payments) ----
 
-/** Submit a signed transaction and poll until it confirms. Returns the tx hash. */
+export interface Confirmed {
+  hash: string;
+  result: rpc.Api.GetSuccessfulTransactionResponse;
+}
+
+/** Submit a signed transaction and poll until it confirms. */
 export async function submitAndConfirm(
   signed: Transaction | FeeBumpTransaction,
-): Promise<string> {
+): Promise<Confirmed> {
   const sent = await server.sendTransaction(signed);
   if (sent.status === "ERROR") {
     throw new Error(`submit failed: ${JSON.stringify(sent.errorResult)}`);
@@ -94,7 +116,9 @@ export async function submitAndConfirm(
   const hash = sent.hash;
   for (let i = 0; i < 30; i++) {
     const res = await server.getTransaction(hash);
-    if (res.status === rpc.Api.GetTransactionStatus.SUCCESS) return hash;
+    if (res.status === rpc.Api.GetTransactionStatus.SUCCESS) {
+      return { hash, result: res };
+    }
     if (res.status === rpc.Api.GetTransactionStatus.FAILED) {
       throw new Error(`transaction failed on-chain (${hash})`);
     }
@@ -105,12 +129,13 @@ export async function submitAndConfirm(
 
 /** Prepare (simulate+assemble), sign with the wallet, submit, and confirm. */
 async function invoke(
+  contractId: string,
   method: string,
   args: xdr.ScVal[],
   caller: string,
-): Promise<string> {
+): Promise<Confirmed> {
   const account = await server.getAccount(caller);
-  const contract = new Contract(CONTRACT_ID);
+  const contract = new Contract(contractId);
   const built = new TransactionBuilder(account, {
     fee: BASE_FEE,
     networkPassphrase: NETWORK_PASSPHRASE,
@@ -125,27 +150,56 @@ async function invoke(
   return submitAndConfirm(signed);
 }
 
-// ---- state-changing calls ----
+// ---- SpendVault calls ----
 
-/** Fund the vault (permissionless — any wallet may deposit). */
-export const deposit = (from: string, amountStroops: bigint) =>
-  invoke("deposit", [addr(from), i128(amountStroops)], from);
+/** Fund a vault (permissionless — any wallet may deposit). */
+export const deposit = (vaultId: string, from: string, amountStroops: bigint) =>
+  invoke(vaultId, "deposit", [addr(from), i128(amountStroops)], from);
 
-/** Owner-only: pay a provider within policy (agent key authorizes). */
-export const pay = (agent: string, provider: string, amountStroops: bigint) =>
-  invoke("pay", [addr(provider), i128(amountStroops)], agent);
+/** Agent pays a provider within policy. */
+export const pay = (
+  vaultId: string,
+  agent: string,
+  provider: string,
+  amountStroops: bigint,
+) => invoke(vaultId, "pay", [addr(provider), i128(amountStroops)], agent);
 
 /** Owner-only: update the per-epoch cap. */
-export const setPolicy = (owner: string, capStroops: bigint, epochLen: bigint) =>
-  invoke(
-    "set_policy",
-    [i128(capStroops), nativeToScVal(epochLen, { type: "u64" })],
-    owner,
-  );
+export const setPolicy = (
+  vaultId: string,
+  owner: string,
+  capStroops: bigint,
+  epochLen: bigint,
+) => invoke(vaultId, "set_policy", [i128(capStroops), u64(epochLen)], owner);
 
 /** Owner-only: reclaim funds. */
-export const withdraw = (owner: string, to: string, amountStroops: bigint) =>
-  invoke("withdraw", [addr(to), i128(amountStroops)], owner);
+export const withdraw = (
+  vaultId: string,
+  owner: string,
+  to: string,
+  amountStroops: bigint,
+) => invoke(vaultId, "withdraw", [addr(to), i128(amountStroops)], owner);
+
+// ---- VaultFactory ----
+
+/** Deploy + initialize a new vault owned by `owner`. Returns the child address. */
+export async function createVault(
+  owner: string,
+  agent: string,
+  capStroops: bigint,
+  epochLen: bigint,
+): Promise<{ vaultId: string; hash: string }> {
+  const { hash, result } = await invoke(
+    FACTORY_ID,
+    "create_vault",
+    [addr(owner), addr(agent), addr(TOKEN_ID), i128(capStroops), u64(epochLen)],
+    owner,
+  );
+  const vaultId = result.returnValue
+    ? (scValToNative(result.returnValue) as string)
+    : "";
+  return { vaultId, hash };
+}
 
 // ---- live event feed ----
 
@@ -184,23 +238,20 @@ function parseEvent(e: rpc.Api.EventResponse): VaultEvent {
 }
 
 /**
- * Fetch recent contract events.
+ * Fetch recent events for a vault.
  *
  * `getEvents` scans *ascending* from `startLedger` with a per-request scan
- * limit, so a wide window returns an empty first page (our events sit near the
- * tip). We page forward with the cursor to drain the window, then return events
- * newest-first.
+ * limit, so we use a window small enough that events near the tip return on the
+ * first call, then follow the cursor a few times defensively. Newest-first.
  */
-export async function fetchEvents(windowLedgers = 2000): Promise<{
-  events: VaultEvent[];
-  latestLedger: number;
-}> {
+export async function fetchEvents(
+  vaultId: string = CONTRACT_ID,
+  windowLedgers = 2000,
+): Promise<{ events: VaultEvent[]; latestLedger: number }> {
   const latest = await server.getLatestLedger();
   const start = Math.max(latest.sequence - windowLedgers, 1);
-  const filters = [{ type: "contract" as const, contractIds: [CONTRACT_ID] }];
+  const filters = [{ type: "contract" as const, contractIds: [vaultId] }];
 
-  // A window this size fits in a single scan page, so events near the tip come
-  // back on the first call. We still follow the cursor a few times defensively.
   const collected: rpc.Api.EventResponse[] = [];
   let cursor: string | undefined;
   for (let page = 0; page < 4; page++) {
