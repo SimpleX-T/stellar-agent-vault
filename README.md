@@ -69,15 +69,27 @@ Errors: `NotInitialized`, `AlreadyInitialized`, `NotAuthorized`, `BudgetExceeded
 
 ## Deployed (Stellar Testnet)
 
-- **Contract address:** [`CDDIK44X6QKACSGXJ37LKNLTOA3FAFYWMNICUP6MGVWRWHU7ZC4FMQ5L`](https://stellar.expert/explorer/testnet/contract/CDDIK44X6QKACSGXJ37LKNLTOA3FAFYWMNICUP6MGVWRWHU7ZC4FMQ5L)
-- **Token (native XLM SAC):** `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC`
-- **Deploy tx:** [`e8f89957…668930`](https://stellar.expert/explorer/testnet/tx/e8f89957a31d469c11062ec0161dbff50c49bcff8ecd48e4ae52ad55ef668930)
-- **Init tx:** [`d5e96591…5da98c`](https://stellar.expert/explorer/testnet/tx/d5e96591efc00472cda8556e2ea89cf7f5dec72dddf25c88ce445ae0375da98c)
-- **Deposit tx:** [`c553d777…691df`](https://stellar.expert/explorer/testnet/tx/c553d777cb50dc887164daad70577798d618d405c2dcc7a46d8c66e7a6f691df)
-- **Agent `pay` tx (contract call):** [`a861ea73…ec7ad`](https://stellar.expert/explorer/testnet/tx/a861ea73a93c59ec3e634794cf1a6cb9258fa2fe1bdf12abb4088b7aef5ec7ad)
+| What | Address / hash |
+|------|----------------|
+| **SpendVault contract** | [`CDDIK44X…MQ5L`](https://stellar.expert/explorer/testnet/contract/CDDIK44X6QKACSGXJ37LKNLTOA3FAFYWMNICUP6MGVWRWHU7ZC4FMQ5L) |
+| **VaultFactory contract** | [`CDWT4DES…J7S2`](https://stellar.expert/explorer/testnet/contract/CDWT4DEST6EIEDDOBGJUCMOVKFEW5R5ACSVVIQZZYOLSREVY5SZKJ7S2) |
+| **Token (native XLM SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| SpendVault wasm hash | `3108e0d30fb237d57a089f0ad46e6e97062ba7c1ec6f32a3caf8f2ec64fdff9d` |
 
-> The `pay` tx emits a `transfer` event (vault → provider, inter-contract SAC call) and a
-> `paid` event `[amount, remaining_budget, epoch]` — streamed live in the UI.
+**Transaction hashes (verifiable on Stellar Explorer):**
+
+| Action | Tx |
+|--------|----|
+| Deploy SpendVault | [`e8f89957…668930`](https://stellar.expert/explorer/testnet/tx/e8f89957a31d469c11062ec0161dbff50c49bcff8ecd48e4ae52ad55ef668930) |
+| Init SpendVault | [`d5e96591…5da98c`](https://stellar.expert/explorer/testnet/tx/d5e96591efc00472cda8556e2ea89cf7f5dec72dddf25c88ce445ae0375da98c) |
+| Deposit (fund vault) | [`c553d777…691df`](https://stellar.expert/explorer/testnet/tx/c553d777cb50dc887164daad70577798d618d405c2dcc7a46d8c66e7a6f691df) |
+| **Agent `pay` (contract call)** | [`a861ea73…ec7ad`](https://stellar.expert/explorer/testnet/tx/a861ea73a93c59ec3e634794cf1a6cb9258fa2fe1bdf12abb4088b7aef5ec7ad) |
+| Init VaultFactory | [`a02f54d9…a1c27`](https://stellar.expert/explorer/testnet/tx/a02f54d9965e91be2600fd2a109fd39c3a664e51e40fa60e889db5adacfa1c27) |
+| **`create_vault` (deploy+init child)** | [`f9c07c17…4a63f`](https://stellar.expert/explorer/testnet/tx/f9c07c178e9a54d221719eeac8e3ad385d8b2273eaa796a7b532846c0df4a63f) |
+
+> The `pay` tx emits a `transfer` event (vault → provider — an inter-contract SAC call) and a
+> `paid` event `[amount, remaining_budget, epoch]`, streamed live in the UI. `create_vault`
+> deploys **and** initializes a child SpendVault in a single transaction (two inter-contract ops).
 
 ---
 
@@ -114,25 +126,62 @@ pnpm dev
 
 ## Screenshots
 
-<!-- added before submission -->
-- Wallet connected state — `TBD`
-- Balance displayed — `TBD`
-- Successful testnet transaction + result shown to user — `TBD`
+**Desktop — live vault state + streamed event feed**
+
+![SpendVault desktop](docs/desktop.png)
+
+**Mobile responsive**
+
+![SpendVault mobile](docs/mobile.png)
+
+<!-- Capture with Freighter connected for the White-belt checklist: -->
+- Wallet connected state — _add screenshot with Freighter connected_
+- Successful testnet transaction + result toast — _add screenshot after sending XLM / funding the vault_
 
 ## Demo video
 
-<!-- Level 3 -->
-`TBD`
+<!-- Level 3: 1–2 min walkthrough -->
+`Add link (Loom / YouTube unlisted)`
 
 ---
 
+## How it relates to x402
+
+[x402](https://developers.stellar.org/docs/build/agentic-payments/x402) is now live on Stellar
+(testnet + mainnet): an agent signs a Soroban authorization to pay per HTTP request, settled in
+~5s for ~$0.00001. It is intentionally **stateless** — there is no budget or allowance layer.
+SpendVault is the complementary primitive: the agent's funds live in the vault, and an x402
+payment becomes a `pay(provider, amount)` call that the contract only honors **within policy**.
+The roadmap below wires the vault behind an x402 facilitator so the spend cap is enforced on
+every per-request payment.
+
+## Tech
+
+- **Contracts:** Rust / Soroban (`soroban-sdk 25`), 8 unit tests, epoch-windowed budgeting.
+- **Frontend:** Vite + React + TypeScript, `@stellar/stellar-sdk`, StellarWalletsKit.
+- **CI:** GitHub Actions — contract tests + wasm build + frontend typecheck/build (`.github/workflows/ci.yml`).
+
 ## Belt coverage
 
-- **White (L1):** Freighter connect/disconnect · XLM balance · send XLM on testnet · tx feedback.
-- **Yellow (L2):** StellarWalletsKit multi-wallet · deployed contract called from frontend ·
-  live events · tx status · 3+ error types handled.
-- **Orange (L3):** factory + policy (inter-contract) · CI/CD · tests · mobile responsive ·
-  x402 facilitator flow · demo video.
+| Belt | Requirement | Where |
+|------|-------------|-------|
+| White | Freighter connect/disconnect | `web/src/components/WalletButton.tsx` |
+| White | XLM balance displayed | `web/src/components/BalanceCard.tsx` |
+| White | Send XLM on testnet + tx feedback | `web/src/components/SendXlmCard.tsx`, `lib/stellar.ts` |
+| Yellow | StellarWalletsKit multi-wallet | `web/src/lib/wallet.ts` |
+| Yellow | Deployed contract called from frontend | `web/src/lib/contract.ts` (deposit/pay) |
+| Yellow | Real-time events / status | `web/src/components/ActivityFeed.tsx`, toasts |
+| Yellow | 3+ error types handled | `web/src/lib/errors.ts` |
+| Orange | Advanced contract + inter-contract | `pay` → SAC, `VaultFactory.create_vault` |
+| Orange | Tests | `contracts/spend-vault/src/test.rs` (8 passing) |
+| Orange | CI/CD | `.github/workflows/ci.yml` |
+| Orange | Mobile responsive | `docs/mobile.png` |
+
+## Run the deployment workflow
+
+```bash
+./scripts/deploy.sh   # build, fund a key, deploy SpendVault + VaultFactory, init, demo a pay
+```
 
 ## License
 MIT
