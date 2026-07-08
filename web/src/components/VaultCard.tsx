@@ -20,6 +20,8 @@ import {
   type VaultState,
 } from "../lib/contract";
 import { friendlyError } from "../lib/errors";
+import { track, type AppEvent } from "../lib/analytics";
+import { captureError } from "../lib/monitoring";
 import {
   EXPLORER_TX,
   EXPLORER_CONTRACT,
@@ -33,6 +35,14 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 
 type Busy = "deposit" | "pay" | "policy" | "withdraw" | "create" | null;
+
+// Maps a vault action to its analytics event name.
+const ACTION_EVENT: Partial<Record<NonNullable<Busy>, AppEvent>> = {
+  deposit: "deposit",
+  pay: "agent_payment",
+  policy: "policy_set",
+  withdraw: "withdraw",
+};
 
 export function VaultCard({
   vaultId,
@@ -99,10 +109,13 @@ export function VaultCard({
         href: EXPLORER_TX(hash),
         hrefLabel: "View transaction",
       });
+      const event = label && ACTION_EVENT[label];
+      if (event) track(event, { vaultId });
       reset?.();
       await Promise.all([load(), refreshBalance()]);
       onChange();
     } catch (e) {
+      captureError(e, { action: label, vaultId });
       update(id, { kind: "error", title: "Action failed", message: friendlyError(e) });
     } finally {
       setBusy(null);

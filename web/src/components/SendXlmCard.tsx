@@ -4,6 +4,8 @@ import { useWallet } from "../hooks/useWallet";
 import { useToasts } from "../hooks/useToasts";
 import { sendXlm } from "../lib/stellar";
 import { friendlyError } from "../lib/errors";
+import { track } from "../lib/analytics";
+import { captureError } from "../lib/monitoring";
 import { EXPLORER_TX } from "../lib/config";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
@@ -33,10 +35,12 @@ export function SendXlmCard() {
         href: EXPLORER_TX(hash),
         hrefLabel: "View transaction",
       });
+      track("xlm_sent", { amount: amount.trim() });
       setTo("");
       setAmount("");
       refreshBalance();
     } catch (e) {
+      captureError(e, { action: "send_xlm" });
       update(id, { kind: "error", title: "Payment failed", message: friendlyError(e) });
     } finally {
       setBusy(false);

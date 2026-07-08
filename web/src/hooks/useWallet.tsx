@@ -8,6 +8,8 @@ import {
 } from "react";
 import { connect as wConnect, disconnect as wDisconnect, restore } from "../lib/wallet";
 import { fetchXlmBalance } from "../lib/stellar";
+import { identifyWallet, resetIdentity, track } from "../lib/analytics";
+import { setUserWallet } from "../lib/monitoring";
 
 interface WalletCtx {
   address: string | null;
@@ -35,6 +37,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const addr = await wConnect();
       setAddress(addr);
+      identifyWallet(addr);
+      setUserWallet(addr);
+      track("wallet_connected", { address: addr });
     } finally {
       setConnecting(false);
     }
@@ -42,12 +47,22 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     await wDisconnect();
+    track("wallet_disconnected");
+    resetIdentity();
+    setUserWallet(null);
     setAddress(null);
     setBalance(null);
   }, []);
 
   useEffect(() => {
-    restore().then((a) => a && setAddress(a));
+    // Restore a prior session: attribute activity to the wallet, but don't fire
+    // wallet_connected (that would double-count returning users in analytics).
+    restore().then((a) => {
+      if (!a) return;
+      setAddress(a);
+      identifyWallet(a);
+      setUserWallet(a);
+    });
   }, []);
 
   useEffect(() => {
