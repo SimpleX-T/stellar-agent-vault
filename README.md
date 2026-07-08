@@ -5,7 +5,9 @@
 > limits); the agent may only spend **within** that policy. Every payout is an
 > inter-contract token transfer that emits an event, streamed live in the UI.
 
-Built for the **Stellar Journey to Mastery** monthly builder challenge (White → Orange belt).
+Built for the **Stellar Journey to Mastery** program — a production MVP carried from the
+White belt through the **Green belt (Level 4)**: analytics, error monitoring, in-app feedback,
+and a public production deployment on top of the on-chain core.
 
 ---
 
@@ -93,6 +95,35 @@ Errors: `NotInitialized`, `AlreadyInitialized`, `NotAuthorized`, `BudgetExceeded
 
 ---
 
+## Production & observability (Level 4)
+
+The app ships with product analytics, error monitoring, and in-app feedback. All three are
+**env-gated** — with no keys they compile to no-ops, so local dev and CI never phone home, and
+they light up the moment keys are present.
+
+| Concern | Tool | Wiring | Enable with |
+|---------|------|--------|-------------|
+| Product analytics | **PostHog** | `web/src/lib/analytics.ts` — users identified by wallet address; events on connect, send, deposit, agent payment, policy change, withdraw | `VITE_POSTHOG_KEY` |
+| Error monitoring | **Sentry** | `web/src/lib/monitoring.ts` — `captureException` at every catch site; branded `CrashFallback` via `ErrorBoundary` | `VITE_SENTRY_DSN` |
+| User feedback | **PostHog event** | `web/src/components/FeedbackWidget.tsx` — floating 1–5 rating + note → `feedback_submitted`, attributed to the wallet | `VITE_POSTHOG_KEY` |
+
+Wallet-based identity means the "N users + wallet interactions" and feedback reports fall
+straight out of the PostHog dashboard — every event is attributable to a Stellar address.
+
+### Deploy (Vercel)
+
+`web/vercel.json` configures a Vite build with an SPA rewrite.
+
+```bash
+# Root Directory: web
+# Build: pnpm build   ·   Output: dist
+```
+
+Set the `VITE_*` vars from `.env.example` in the Vercel project (network + contract ids are
+required; the two observability keys are optional but recommended for the graded submission).
+
+**Live app:** `Add Vercel URL after first deploy`
+
 ## Run locally
 
 ### Prerequisites
@@ -134,9 +165,15 @@ pnpm dev
 
 ![SpendVault mobile](docs/mobile.png)
 
-<!-- Capture with Freighter connected for the White-belt checklist: -->
+**Analytics & monitoring**
+
+![PostHog dashboard](docs/analytics.png)
+
+<!-- Capture for the checklist: -->
 - Wallet connected state — _add screenshot with Freighter connected_
 - Successful testnet transaction + result toast — _add screenshot after sending XLM / funding the vault_
+- PostHog dashboard showing events + identified wallets — _docs/analytics.png_
+- Sentry issues stream (or "no issues") — _optional_
 
 ## Demo video
 
@@ -176,6 +213,22 @@ every per-request payment.
 | Orange | Tests | `contracts/spend-vault/src/test.rs` (8 passing) |
 | Orange | CI/CD | `.github/workflows/ci.yml` |
 | Orange | Mobile responsive | `docs/mobile.png` |
+
+## Level 4 — Green Belt checklist
+
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| Production-ready MVP, stable architecture | ✅ | contracts on testnet + typed frontend |
+| Mobile responsive UI | ✅ | responsive grid; `docs/mobile.png` |
+| Loading + error states | ✅ | toasts, `friendlyError`, `CrashFallback` |
+| Monitoring + analytics integration | ✅ | PostHog + Sentry (`lib/analytics.ts`, `lib/monitoring.ts`) |
+| In-app feedback collection | ✅ | `components/FeedbackWidget.tsx` |
+| Production deployment | ⏳ | Vercel (`web/vercel.json`) — _add live URL_ |
+| 10+ real users + wallet-interaction proof | ⏳ | PostHog "identified users" export — _in progress_ |
+| Basic user feedback summary | ⏳ | PostHog `feedback_submitted` events — _in progress_ |
+| 15+ meaningful commits | ✅ | `git log` |
+| Public GitHub repo | ✅ | this repo |
+| Demo video | ⏳ | _add link_ |
 
 ## Run the deployment workflow
 
