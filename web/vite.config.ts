@@ -12,6 +12,7 @@ export default defineConfig({
           if (id.includes("node_modules")) {
             if (id.includes("@stellar")) return "stellar-sdk";
             if (id.includes("stellar-wallets-kit") || id.includes("@creit")) return "wallet-kit";
+            if (id.includes("@sentry") || id.includes("posthog")) return "observability";
             if (id.includes("react")) return "react";
             return "vendor";
           }
