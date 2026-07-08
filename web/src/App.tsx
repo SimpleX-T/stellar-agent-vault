@@ -7,9 +7,12 @@ import { BalanceCard } from "./components/BalanceCard";
 import { SendXlmCard } from "./components/SendXlmCard";
 import { VaultCard } from "./components/VaultCard";
 import { ActivityFeed } from "./components/ActivityFeed";
+import { FeedbackWidget } from "./components/FeedbackWidget";
 import { Toasts } from "./components/Toasts";
 import { createVault, vaultsOf } from "./lib/contract";
 import { friendlyError } from "./lib/errors";
+import { track } from "./lib/analytics";
+import { captureError } from "./lib/monitoring";
 import { CONTRACT_ID, EXPLORER_TX, xlmToStroops } from "./lib/config";
 
 const EPOCH_LEN = 86400n; // 1 day
@@ -57,8 +60,10 @@ function Shell() {
           hrefLabel: "View transaction",
         });
         if (vaultId) setActiveVault(vaultId);
+        track("vault_created", { vaultId, capXlm });
         bump();
       } catch (e) {
+        captureError(e, { action: "create_vault", address, capXlm });
         update(id, { kind: "error", title: "Couldn't create vault", message: friendlyError(e) });
       } finally {
         setCreating(false);
@@ -133,6 +138,7 @@ function Shell() {
           </a>
         </footer>
       </div>
+      <FeedbackWidget />
       <Toasts />
     </>
   );
