@@ -73,9 +73,13 @@ Errors: `NotInitialized`, `AlreadyInitialized`, `NotAuthorized`, `BudgetExceeded
 
 | What | Address / hash |
 |------|----------------|
-| **SpendVault contract** | [`CDDIK44X…MQ5L`](https://stellar.expert/explorer/testnet/contract/CDDIK44X6QKACSGXJ37LKNLTOA3FAFYWMNICUP6MGVWRWHU7ZC4FMQ5L) |
-| **VaultFactory contract** | [`CDWT4DES…J7S2`](https://stellar.expert/explorer/testnet/contract/CDWT4DEST6EIEDDOBGJUCMOVKFEW5R5ACSVVIQZZYOLSREVY5SZKJ7S2) |
+| **SpendVault contract** (demo) | [`CDDIK44X…MQ5L`](https://stellar.expert/explorer/testnet/contract/CDDIK44X6QKACSGXJ37LKNLTOA3FAFYWMNICUP6MGVWRWHU7ZC4FMQ5L) |
+| **VaultFactory** (registry-enabled) | [`CCZQRQXV…BKTV`](https://stellar.expert/explorer/testnet/contract/CCZQRQXVI7OKH4JISBQASCFG65XIPT5RF4X7V52OHXO4Z54AY2UNBKTV) |
 | **Token (native XLM SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+
+> The factory exposes an on-chain **`all_vaults()`** registry (+ `admin()`) that backs the admin
+> dashboard — a complete vault list independent of RPC event retention. The earlier factory
+> (`CDWT4DES…J7S2`) remains valid on-chain as Level 1–3 belt evidence.
 | SpendVault wasm hash | `3108e0d30fb237d57a089f0ad46e6e97062ba7c1ec6f32a3caf8f2ec64fdff9d` |
 
 **Transaction hashes (verifiable on Stellar Explorer):**
@@ -109,6 +113,19 @@ they light up the moment keys are present.
 
 Wallet-based identity means the "N users + wallet interactions" and feedback reports fall
 straight out of the PostHog dashboard — every event is attributable to a Stellar address.
+
+### Admin dashboard (`/#/admin`)
+
+An operator view that answers what off-chain analytics can't: the **on-chain** aggregate.
+It reads the factory's `all_vaults()` registry and each vault's live state, then shows:
+
+- KPIs — vaults created, **total value locked**, spent this epoch, unique owners
+- a registry table — per vault: owner, agent, balance, spend, and epoch-budget meter
+- deep links to the **PostHog** (product) and **Sentry** (errors) dashboards for the off-chain side
+
+Access is gated to the on-chain factory `admin()` **or** any wallet in `VITE_ADMIN_ADDRESS`.
+This is the on-chain complement to PostHog/Sentry — those cover the funnel and crashes; this
+covers settled value and policy state, which live only on-chain.
 
 ### Deploy (Vercel)
 
@@ -222,6 +239,7 @@ every per-request payment.
 | Mobile responsive UI | ✅ | responsive grid; `docs/mobile.png` |
 | Loading + error states | ✅ | toasts, `friendlyError`, `CrashFallback` |
 | Monitoring + analytics integration | ✅ | PostHog + Sentry (`lib/analytics.ts`, `lib/monitoring.ts`) |
+| On-chain operator dashboard | ✅ | `components/AdminDashboard.tsx` + factory `all_vaults()` |
 | In-app feedback collection | ✅ | `components/FeedbackWidget.tsx` |
 | Production deployment | ⏳ | Vercel (`web/vercel.json`) — _add live URL_ |
 | 10+ real users + wallet-interaction proof | ⏳ | PostHog "identified users" export — _in progress_ |
