@@ -8,6 +8,7 @@ import { SendXlmCard } from "./components/SendXlmCard";
 import { VaultCard } from "./components/VaultCard";
 import { ActivityFeed } from "./components/ActivityFeed";
 import { FeedbackWidget } from "./components/FeedbackWidget";
+import { AdminDashboard } from "./components/AdminDashboard";
 import { Toasts } from "./components/Toasts";
 import { createVault, vaultsOf } from "./lib/contract";
 import { friendlyError } from "./lib/errors";
@@ -127,7 +128,12 @@ function Shell() {
         </div>
 
         <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5 text-xs text-muted-foreground">
-          <span>Stellar Journey to Mastery · White → Orange belt</span>
+          <div className="flex items-center gap-4">
+            <span>Stellar Journey to Mastery</span>
+            <a href="#/admin" className="hover:text-neon-cyan">
+              Admin
+            </a>
+          </div>
           <a
             href="https://developers.stellar.org/docs/build/agentic-payments/x402"
             target="_blank"
@@ -139,16 +145,28 @@ function Shell() {
         </footer>
       </div>
       <FeedbackWidget />
-      <Toasts />
     </>
   );
+}
+
+// Minimal hash router: the admin dashboard lives at /#/admin so it can be
+// bookmarked and deep-linked without pulling in a routing library.
+function Router() {
+  const [hash, setHash] = useState(window.location.hash);
+  useEffect(() => {
+    const onHash = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  return hash.startsWith("#/admin") ? <AdminDashboard /> : <Shell />;
 }
 
 export default function App() {
   return (
     <ToastProvider>
       <WalletProvider>
-        <Shell />
+        <Router />
+        <Toasts />
       </WalletProvider>
     </ToastProvider>
   );

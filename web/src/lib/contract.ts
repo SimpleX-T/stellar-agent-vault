@@ -98,6 +98,52 @@ export async function vaultsOf(owner: string): Promise<string[]> {
   return res ?? [];
 }
 
+/** Every vault ever created through the factory (on-chain registry). */
+export async function allVaults(): Promise<string[]> {
+  const res = (await readView(FACTORY_ID, "all_vaults")) as string[] | null;
+  return res ?? [];
+}
+
+/** The factory admin — used to gate the admin dashboard on-chain. */
+export async function factoryAdmin(): Promise<string> {
+  return (await readView(FACTORY_ID, "admin")) as string;
+}
+
+/** Aggregate on-chain view of a single vault for the admin dashboard. */
+export interface VaultSummary extends VaultState {
+  id: string;
+  error?: string;
+}
+
+/**
+ * Read the full registry and each vault's state. Vaults are read in parallel;
+ * a vault that fails to load is returned with an `error` rather than sinking the
+ * whole dashboard.
+ */
+export async function fetchAllVaultSummaries(): Promise<VaultSummary[]> {
+  const ids = await allVaults();
+  return Promise.all(
+    ids.map(async (id): Promise<VaultSummary> => {
+      try {
+        const state = await getVaultState(id);
+        return { id, ...state };
+      } catch (e) {
+        return {
+          id,
+          owner: "",
+          agent: "",
+          cap: 0n,
+          epochLen: 0n,
+          spent: 0n,
+          remaining: 0n,
+          balance: 0n,
+          error: e instanceof Error ? e.message : String(e),
+        };
+      }
+    }),
+  );
+}
+
 // ---- submit helpers (shared with classic payments) ----
 
 export interface Confirmed {

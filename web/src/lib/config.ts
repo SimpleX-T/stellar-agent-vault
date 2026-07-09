@@ -13,6 +13,20 @@ export const TOKEN_ID = import.meta.env.VITE_TOKEN_ID as string;
 // A funded account used purely as the source for read-only simulation of view calls.
 export const READ_SOURCE = import.meta.env.VITE_READ_SOURCE as string;
 
+// Wallets allowed into the admin dashboard (in addition to the on-chain factory
+// admin). Comma-separated addresses.
+export const ADMIN_ALLOWLIST = (
+  (import.meta.env.VITE_ADMIN_ADDRESS as string | undefined) ?? ""
+)
+  .split(",")
+  .map((a) => a.trim())
+  .filter(Boolean);
+
+export const POSTHOG_PROJECT_URL =
+  (import.meta.env.VITE_POSTHOG_PROJECT_URL as string | undefined) ?? "https://us.posthog.com";
+export const SENTRY_PROJECT_URL =
+  (import.meta.env.VITE_SENTRY_PROJECT_URL as string | undefined) ?? "https://sentry.io";
+
 // XLM has 7 decimals. 1 XLM = 10^7 stroops.
 export const STROOPS_PER_XLM = 10_000_000n;
 
