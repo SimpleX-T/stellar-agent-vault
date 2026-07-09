@@ -19,6 +19,7 @@ pub enum DataKey {
     WasmHash,
     Count,
     Owner(Address), // owner -> Vec<Address> of their vaults
+    AllVaults,      // global registry: Vec<Address> of every vault created
 }
 
 #[contracterror]
@@ -104,6 +105,18 @@ impl VaultFactory {
         env.storage()
             .persistent()
             .set(&DataKey::Owner(owner.clone()), &list);
+
+        // Global registry: append to the flat list of every vault ever created,
+        // so an operator can enumerate all of them on-chain (RPC event history is
+        // only retained ~7 days, so events alone can't reliably list old vaults).
+        let mut all: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&DataKey::AllVaults)
+            .unwrap_or(vec![&env]);
+        all.push_back(deployed.clone());
+        env.storage().persistent().set(&DataKey::AllVaults, &all);
+
         env.storage().instance().set(&DataKey::Count, &(count + 1));
 
         env.events().publish((CREATED, owner), deployed.clone());
@@ -115,6 +128,19 @@ impl VaultFactory {
             .persistent()
             .get(&DataKey::Owner(owner))
             .unwrap_or(vec![&env])
+    }
+
+    /// Every vault ever created through this factory. Backs the admin dashboard.
+    pub fn all_vaults(env: Env) -> Vec<Address> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::AllVaults)
+            .unwrap_or(vec![&env])
+    }
+
+    /// The factory admin (operator). Used to gate the admin dashboard on-chain.
+    pub fn admin(env: Env) -> Address {
+        env.storage().instance().get(&DataKey::Admin).unwrap()
     }
 
     pub fn total(env: Env) -> u32 {
