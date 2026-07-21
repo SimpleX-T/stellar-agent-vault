@@ -13,10 +13,10 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs rounded-md",
-  md: "h-10 px-4 text-sm rounded-lg",
-  lg: "h-12 px-6 text-base rounded-lg",
-  icon: "size-9 rounded-md",
+  sm: "h-8 px-3.5 text-xs rounded-lg",
+  md: "h-10 px-4.5 text-sm rounded-xl",
+  lg: "h-12 px-6 text-base rounded-xl",
+  icon: "size-9 rounded-lg",
 };
 
 export interface ButtonProps

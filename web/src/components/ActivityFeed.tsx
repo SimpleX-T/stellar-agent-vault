@@ -75,17 +75,17 @@ export function ActivityFeed({ vaultId, refreshKey }: { vaultId: string; refresh
                   animate={{ opacity: 1, y: 0 }}
                   className="group flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-secondary/40"
                 >
-                  <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-background ${m.dot}`}>
+                  <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-white ${m.dot}`}>
                     {m.icon}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-medium">{m.label}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-muted-foreground tnum">
-                      {e.who && <span>{shortenAddr(e.who)}</span>}
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11.5px] text-muted-foreground">
+                      {e.who && <span className="data">{shortenAddr(e.who)}</span>}
                       {e.amount !== undefined && (
-                        <span className="font-semibold text-neon-cyan">{stroopsToXlm(e.amount)} XLM</span>
+                        <span className="data font-semibold text-purple">{stroopsToXlm(e.amount)} XLM</span>
                       )}
-                      {e.remaining !== undefined && <span>· {stroopsToXlm(e.remaining)} left</span>}
+                      {e.remaining !== undefined && <span className="data">· {stroopsToXlm(e.remaining)} left</span>}
                     </div>
                   </div>
                   {e.txHash && (

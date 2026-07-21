@@ -8,6 +8,7 @@ import {
   Plus,
   ExternalLink,
   Sparkles,
+  KeyRound,
 } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
 import { useToasts } from "../hooks/useToasts";
@@ -19,6 +20,7 @@ import {
   getVaultState,
   type VaultState,
 } from "../lib/contract";
+import { isStellarAddress } from "../lib/stellar";
 import { friendlyError } from "../lib/errors";
 import { track, type AppEvent } from "../lib/analytics";
 import { captureError } from "../lib/monitoring";
@@ -33,6 +35,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
+import { AgentDialog } from "./AgentDialog";
 
 type Busy = "deposit" | "pay" | "policy" | "withdraw" | "create" | null;
 
@@ -63,6 +66,7 @@ export function VaultCard({
   const { notify, update } = useToasts();
   const [state, setState] = useState<VaultState | null>(null);
   const [busy, setBusy] = useState<Busy>(null);
+  const [agentOpen, setAgentOpen] = useState(false);
 
   const [depositAmt, setDepositAmt] = useState("");
   const [provider, setProvider] = useState("");
@@ -89,6 +93,11 @@ export function VaultCard({
 
   const isAgent = !!address && state?.agent === address;
   const isOwner = !!address && state?.owner === address;
+
+  const providerOk = isStellarAddress(provider);
+  const providerInvalid = provider.trim().length > 0 && !providerOk;
+  const wdToOk = isStellarAddress(wdTo);
+  const wdToInvalid = wdTo.trim().length > 0 && !wdToOk;
 
   const run = async (
     label: Busy,
@@ -139,12 +148,12 @@ export function VaultCard({
               href={EXPLORER_CONTRACT(vaultId)}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground tnum hover:text-neon-cyan"
+              className="data mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-purple"
             >
               {shortenAddr(vaultId)} <ExternalLink className="size-3" />
             </a>
           </div>
-          <Badge className="border-neon-cyan/30 text-foreground">Level 2 · on-chain budget</Badge>
+          <Badge className="border-purple/30 text-foreground">Level 2 · on-chain budget</Badge>
         </div>
 
         {/* Create-your-own banner when viewing the shared demo vault */}
@@ -212,10 +221,22 @@ export function VaultCard({
         </div>
 
         {/* Roles */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <RoleChip label="Owner" addr={state?.owner} you={isOwner} />
           <RoleChip label="Agent" addr={state?.agent} you={isAgent} />
+          {isOwner && (
+            <Button variant="outline" size="sm" className="ml-auto" onClick={() => setAgentOpen(true)}>
+              <KeyRound className="size-3.5" />
+              Manage agent
+            </Button>
+          )}
         </div>
+        {isOwner && state && state.agent === state.owner && (
+          <p className="-mt-2 text-[11.5px] leading-snug text-coral">
+            Your agent is your own wallet — no separation. Give it a dedicated key so a leak can't
+            touch anything but this vault's capped budget.
+          </p>
+        )}
 
         {/* Fund */}
         <Action title="Fund vault" hint="anyone" icon={<ArrowDownToLine className="size-3.5" />}>
@@ -253,8 +274,13 @@ export function VaultCard({
               placeholder="Provider address G…"
               value={provider}
               spellCheck={false}
+              aria-invalid={providerInvalid}
+              className={providerInvalid ? "border-coral/60 focus:border-coral focus:ring-coral/25" : ""}
               onChange={(e) => setProvider(e.target.value)}
             />
+            {providerInvalid && (
+              <p className="text-[11px] text-coral">Not a Stellar address (G…, 56 chars).</p>
+            )}
             <div className="flex gap-2">
               <Input
                 type="number"
@@ -265,7 +291,7 @@ export function VaultCard({
               />
               <Button
                 disabled={
-                  !address || !(Number(payAmt) > 0) || provider.trim().length !== 56 || busy !== null
+                  !address || !(Number(payAmt) > 0) || !providerOk || busy !== null
                 }
                 onClick={() =>
                   run(
@@ -284,8 +310,8 @@ export function VaultCard({
             </div>
             {address && state && !isAgent && (
               <p className="text-[11.5px] leading-snug text-muted-foreground/80">
-                You aren't this vault's agent — a <code className="text-warning">pay</code> call is
-                rejected with <code className="text-warning">NotAuthorized</code> (enforcement, live).
+                You aren't this vault's agent — a <code className="data text-coral">pay</code> call is
+                rejected with <code className="data text-coral">NotAuthorized</code> (enforcement, live).
               </p>
             )}
           </div>
@@ -336,8 +362,13 @@ export function VaultCard({
                   placeholder="To address G…"
                   value={wdTo}
                   spellCheck={false}
+                  aria-invalid={wdToInvalid}
+                  className={wdToInvalid ? "border-coral/60 focus:border-coral focus:ring-coral/25" : ""}
                   onChange={(e) => setWdTo(e.target.value)}
                 />
+                {wdToInvalid && (
+                  <p className="text-[11px] text-coral">Not a Stellar address (G…, 56 chars).</p>
+                )}
                 <div className="flex gap-2">
                   <Input
                     type="number"
@@ -348,7 +379,7 @@ export function VaultCard({
                   />
                   <Button
                     variant="outline"
-                    disabled={!(Number(wdAmt) > 0) || wdTo.trim().length !== 56 || busy !== null}
+                    disabled={!(Number(wdAmt) > 0) || !wdToOk || busy !== null}
                     onClick={() =>
                       run(
                         "withdraw",
@@ -368,6 +399,19 @@ export function VaultCard({
             </Action>
           </div>
         )}
+
+        {agentOpen && state && isOwner && (
+          <AgentDialog
+            vaultId={vaultId}
+            owner={state.owner}
+            currentAgent={state.agent}
+            onClose={() => setAgentOpen(false)}
+            onChanged={() => {
+              load();
+              onChange();
+            }}
+          />
+        )}
       </CardContent>
     </Card>
   );
@@ -376,13 +420,14 @@ export function VaultCard({
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div
-      className={`rounded-lg border p-3 ${
-        accent ? "border-neon-cyan/30 bg-neon-cyan/[0.06]" : "border-border bg-background/30"
+      className={`rounded-xl border p-3 ${
+        accent ? "border-purple/30 bg-purple/[0.08]" : "border-border bg-background/30"
       }`}
     >
       <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className="mt-1 break-words text-lg font-semibold tracking-tight tnum">
-        {value} <span className="text-[11px] font-medium text-muted-foreground">XLM</span>
+      <div className="mt-1 break-words text-lg font-semibold">
+        <span className="data">{value}</span>{" "}
+        <span className="text-[11px] font-medium text-muted-foreground">XLM</span>
       </div>
     </div>
   );
@@ -392,9 +437,9 @@ function RoleChip({ label, addr, you }: { label: string; addr?: string; you?: bo
   return (
     <div className="flex items-center gap-2 rounded-full border border-border bg-background/30 px-3 py-1.5 text-xs">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold tnum">{addr ? shortenAddr(addr) : "—"}</span>
+      <span className="data font-semibold">{addr ? shortenAddr(addr) : "—"}</span>
       {you && (
-        <span className="rounded-full bg-neon-cyan px-1.5 text-[10px] font-bold text-background">you</span>
+        <span className="rounded-full bg-purple px-1.5 text-[10px] font-bold text-primary-foreground">you</span>
       )}
     </div>
   );

@@ -10,6 +10,12 @@ export const CONTRACT_ID = import.meta.env.VITE_CONTRACT_ID as string;
 export const FACTORY_ID = import.meta.env.VITE_FACTORY_ID as string;
 export const TOKEN_ID = import.meta.env.VITE_TOKEN_ID as string;
 
+// AgentWallet smart-account model (the overhaul). Separate from the legacy
+// SpendVault FACTORY_ID above so both can coexist during the migration.
+export const WALLET_FACTORY_ID = import.meta.env.VITE_WALLET_FACTORY_ID as string;
+// Gas-only relayer public key (agents spend gaslessly through the service).
+export const RELAYER_PUBKEY = import.meta.env.VITE_RELAYER_PUBKEY as string;
+
 // A funded account used purely as the source for read-only simulation of view calls.
 export const READ_SOURCE = import.meta.env.VITE_READ_SOURCE as string;
 

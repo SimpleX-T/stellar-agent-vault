@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
 import { WalletButton } from "./WalletButton";
+import { ThemeToggle } from "./ThemeToggle";
 import { fetchAllVaultSummaries, factoryAdmin, type VaultSummary } from "../lib/contract";
 import { captureError } from "../lib/monitoring";
 import {
@@ -79,7 +80,7 @@ export function AdminDashboard() {
       <div className="mx-auto max-w-[1240px] px-4 pb-16 pt-6 sm:px-8">
         <header className="mb-9 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="neon-ring grid size-11 place-items-center rounded-xl bg-gradient-to-br from-neon-cyan/25 to-neon-violet/25 text-lg font-bold text-neon-cyan">
+            <span className="neon-ring glow grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-purple/30 to-lavender/20 text-lavender">
               <ShieldCheck className="size-5" />
             </span>
             <div>
@@ -90,7 +91,7 @@ export function AdminDashboard() {
                 href={EXPLORER_CONTRACT(FACTORY_ID)}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-neon-cyan"
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-purple"
               >
                 factory {shortenAddr(FACTORY_ID)} <ExternalLink className="size-3" />
               </a>
@@ -102,6 +103,7 @@ export function AdminDashboard() {
                 <ArrowLeft className="size-4" /> App
               </Button>
             </a>
+            <ThemeToggle />
             <WalletButton />
           </div>
         </header>
@@ -112,7 +114,7 @@ export function AdminDashboard() {
           </Gate>
         ) : !isAdmin ? (
           <Gate icon={<Lock className="size-6 text-warning" />} title="Not authorized">
-            <span className="tnum">{shortenAddr(address)}</span> isn't an admin wallet. Add it to{" "}
+            <span className="data">{shortenAddr(address)}</span> isn't an admin wallet. Add it to{" "}
             <code className="text-warning">VITE_ADMIN_ADDRESS</code>, or connect the factory admin.
           </Gate>
         ) : (
@@ -205,7 +207,7 @@ function Row({ v }: { v: VaultSummary }) {
           href={EXPLORER_CONTRACT(v.id)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1 tnum hover:text-neon-cyan"
+          className="inline-flex items-center gap-1 data hover:text-purple"
         >
           {shortenAddr(v.id)} <ExternalLink className="size-3" />
         </a>
@@ -217,13 +219,13 @@ function Row({ v }: { v: VaultSummary }) {
       ) : (
         <>
           <td className="p-3">
-            <a href={EXPLORER_ACCOUNT(v.owner)} target="_blank" rel="noreferrer" className="tnum hover:text-neon-cyan">
+            <a href={EXPLORER_ACCOUNT(v.owner)} target="_blank" rel="noreferrer" className="data hover:text-purple">
               {shortenAddr(v.owner)}
             </a>
           </td>
-          <td className="p-3 tnum text-muted-foreground">{shortenAddr(v.agent)}</td>
-          <td className="p-3 text-right tnum">{fmt(v.balance)}</td>
-          <td className="p-3 text-right tnum">{fmt(v.spent)}</td>
+          <td className="p-3 data text-muted-foreground">{shortenAddr(v.agent)}</td>
+          <td className="p-3 text-right data">{fmt(v.balance)}</td>
+          <td className="p-3 text-right data">{fmt(v.spent)}</td>
           <td className="p-3">
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-24 overflow-hidden rounded-full bg-secondary/70">
@@ -238,7 +240,7 @@ function Row({ v }: { v: VaultSummary }) {
                   }}
                 />
               </div>
-              <span className="tnum text-xs text-muted-foreground">
+              <span className="data text-xs text-muted-foreground">
                 {fmt(v.spent)}/{fmt(v.cap)}
               </span>
             </div>
@@ -267,7 +269,7 @@ function Kpi({
           <span className="text-neon-cyan">{icon}</span>
           {label}
         </div>
-        <div className="text-xl font-semibold tracking-tight tnum">{value}</div>
+        <div className="text-xl font-semibold tracking-tight data">{value}</div>
       </CardContent>
     </Card>
   );

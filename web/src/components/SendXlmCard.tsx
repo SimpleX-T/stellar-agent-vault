@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Send } from "lucide-react";
 import { useWallet } from "../hooks/useWallet";
 import { useToasts } from "../hooks/useToasts";
-import { sendXlm } from "../lib/stellar";
+import { sendXlm, isStellarAddress } from "../lib/stellar";
 import { friendlyError } from "../lib/errors";
 import { track } from "../lib/analytics";
 import { captureError } from "../lib/monitoring";
@@ -19,8 +19,9 @@ export function SendXlmCard() {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const valid =
-    !!address && to.trim().startsWith("G") && to.trim().length === 56 && Number(amount) > 0;
+  const addrOk = isStellarAddress(to);
+  const addrInvalid = to.trim().length > 0 && !addrOk;
+  const valid = !!address && addrOk && Number(amount) > 0;
 
   const onSend = async () => {
     if (!address || !valid) return;
@@ -60,7 +61,19 @@ export function SendXlmCard() {
 
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Destination address</label>
-          <Input placeholder="G…" value={to} spellCheck={false} onChange={(e) => setTo(e.target.value)} />
+          <Input
+            placeholder="G…"
+            value={to}
+            spellCheck={false}
+            aria-invalid={addrInvalid}
+            className={addrInvalid ? "border-coral/60 focus:border-coral focus:ring-coral/25" : ""}
+            onChange={(e) => setTo(e.target.value)}
+          />
+          {addrInvalid && (
+            <p className="text-[11.5px] text-coral">
+              Not a Stellar address — it must be a 56-character key starting with <code className="data">G</code>.
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">Amount (XLM)</label>

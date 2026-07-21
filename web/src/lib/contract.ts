@@ -218,6 +218,10 @@ export const setPolicy = (
   epochLen: bigint,
 ) => invoke(vaultId, "set_policy", [i128(capStroops), u64(epochLen)], owner);
 
+/** Owner-only: rotate the vault's agent key (the only key allowed to `pay`). */
+export const setAgent = (vaultId: string, owner: string, agent: string) =>
+  invoke(vaultId, "set_agent", [addr(agent)], owner);
+
 /** Owner-only: reclaim funds. */
 export const withdraw = (
   vaultId: string,

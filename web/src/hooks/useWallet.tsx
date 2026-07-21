@@ -7,17 +7,21 @@ import {
   type ReactNode,
 } from "react";
 import { connect as wConnect, disconnect as wDisconnect, restore } from "../lib/wallet";
-import { fetchXlmBalance } from "../lib/stellar";
+import { loadXlm, fundWithFriendbot } from "../lib/stellar";
 import { identifyWallet, resetIdentity, track } from "../lib/analytics";
 import { setUserWallet } from "../lib/monitoring";
 
 interface WalletCtx {
   address: string | null;
   balance: string | null;
+  /** null = unknown/loading, false = account not on-chain yet, true = funded. */
+  funded: boolean | null;
   connecting: boolean;
+  funding: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   refreshBalance: () => Promise<void>;
+  fund: () => Promise<void>;
 }
 
 const Ctx = createContext<WalletCtx | null>(null);
@@ -25,12 +29,28 @@ const Ctx = createContext<WalletCtx | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
+  const [funded, setFunded] = useState<boolean | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [funding, setFunding] = useState(false);
 
   const refreshBalance = useCallback(async () => {
     if (!address) return;
-    setBalance(await fetchXlmBalance(address));
+    const { funded: f, balance: b } = await loadXlm(address);
+    setFunded(f);
+    setBalance(b);
   }, [address]);
+
+  const fund = useCallback(async () => {
+    if (!address) return;
+    setFunding(true);
+    try {
+      await fundWithFriendbot(address);
+      await refreshBalance();
+      track("account_funded", { address });
+    } finally {
+      setFunding(false);
+    }
+  }, [address, refreshBalance]);
 
   const connect = useCallback(async () => {
     setConnecting(true);
@@ -52,6 +72,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setUserWallet(null);
     setAddress(null);
     setBalance(null);
+    setFunded(null);
   }, []);
 
   useEffect(() => {
@@ -74,7 +95,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ address, balance, connecting, connect, disconnect, refreshBalance }}
+      value={{
+        address,
+        balance,
+        funded,
+        connecting,
+        funding,
+        connect,
+        disconnect,
+        refreshBalance,
+        fund,
+      }}
     >
       {children}
     </Ctx.Provider>

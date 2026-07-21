@@ -28,13 +28,13 @@ export function WalletButton() {
 
   return (
     <div className="glass flex items-center gap-2 rounded-full py-1.5 pl-3.5 pr-1.5">
-      <span className="size-2 rounded-full bg-neon-cyan pulse-dot" />
+      <span className="size-2 rounded-full bg-success pulse-dot" />
       <a
         href={EXPLORER_ACCOUNT(address)}
         target="_blank"
         rel="noreferrer"
         title={address}
-        className="flex items-center gap-1 text-[13px] font-semibold tnum hover:text-neon-cyan"
+        className="data flex items-center gap-1 text-[13px] font-semibold hover:text-purple"
       >
         {shortenAddr(address)}
         <ExternalLink className="size-3 opacity-60" />

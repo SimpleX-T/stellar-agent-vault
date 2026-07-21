@@ -36,6 +36,8 @@ export function friendlyError(e: unknown): string {
     return CONTRACT_ERRORS[code] ?? `Contract rejected the call (code ${code}).`;
   }
 
+  if (/account not found|not found|404|resource missing/i.test(raw))
+    return "Your account isn't funded on testnet yet — fund it first, then try again.";
   if (/insufficient/i.test(raw)) return "Insufficient balance.";
   if (/op_no_destination|destination/i.test(raw))
     return "Destination account does not exist on testnet.";

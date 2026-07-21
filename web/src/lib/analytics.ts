@@ -19,6 +19,7 @@ export const analyticsEnabled = Boolean(KEY);
 export type AppEvent =
   | "wallet_connected"
   | "wallet_disconnected"
+  | "account_funded"
   | "vault_created"
   | "xlm_sent"
   | "policy_set"
