@@ -3,6 +3,14 @@
 version = 4
 
 [[package]]
+name = "agent-wallet"
+version = "0.1.0"
+dependencies = [
+ "ed25519-dalek",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1688,6 +1696,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.118",
+]
+
+[[package]]
+name = "wallet-factory"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
 ]
 
 [[package]]
