@@ -1,0 +1,21 @@
+{
+  "name": "spendvault-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Relayer + signing service for AgentWallet smart accounts. Deploys wallets, sets policy, and proves policy enforcement on Stellar testnet.",
+  "scripts": {
+    "prove": "tsx src/prove.ts",
+    "deploy": "tsx src/deploy.ts",
+    "spend": "tsx src/spend.ts",
+    "find": "tsx src/find.ts"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^16.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
