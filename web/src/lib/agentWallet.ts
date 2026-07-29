@@ -28,6 +28,7 @@ import {
   type xdr,
 } from "@stellar/stellar-sdk";
 import { StellarWalletsKit } from "@creit.tech/stellar-wallets-kit";
+import { Buffer } from "buffer";
 import { RPC_URL, NETWORK_PASSPHRASE, WALLET_FACTORY_ID, TOKEN_ID, READ_SOURCE } from "./config";
 import { signTx } from "./wallet";
 
@@ -38,7 +39,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const addr = (a: string) => Address.fromString(a).toScVal();
 const i128 = (n: bigint) => nativeToScVal(n, { type: "i128" });
 const u64 = (n: bigint) => nativeToScVal(n, { type: "u64" });
-const bool = (b: boolean) => nativeToScVal(b, { type: "bool" });
+const bool = (b: boolean) => nativeToScVal(b);
 const roleScVal = (r: "admin" | "spender") => nativeToScVal(r === "admin" ? 1 : 0, { type: "u32" });
 /** A G… account address as its raw 32-byte ed25519 key — the wallet's signer id. */
 const pubkeyBytes = (g: string) =>

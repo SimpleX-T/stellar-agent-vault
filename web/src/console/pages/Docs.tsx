@@ -1,6 +1,6 @@
 import { BookText } from "lucide-react";
 import { WALLET_FACTORY_ID, TOKEN_ID, RELAYER_PUBKEY, shortenAddr, EXPLORER_CONTRACT } from "../../lib/config";
-import { PageHeader, Panel, Eyebrow, Copyable, Pill } from "../ui";
+import { PageHeader, Eyebrow, Copyable, Pill } from "../ui";
 
 const TOC = [
   ["what", "What SpendVault is"],

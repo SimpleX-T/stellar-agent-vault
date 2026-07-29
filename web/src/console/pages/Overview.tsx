@@ -1,6 +1,6 @@
 import { ArrowUpRight, Bot, Coins, ShieldCheck, Gauge } from "lucide-react";
 import { useFleet } from "../useFleet";
-import { stroopsToXlm, shortenAddr, EXPLORER_CONTRACT } from "../../lib/config";
+import { stroopsToXlm, shortenAddr } from "../../lib/config";
 import { PageHeader, StatTile, Panel, Eyebrow, Pill, Empty, Copyable, Meter } from "../ui";
 
 export function Overview() {

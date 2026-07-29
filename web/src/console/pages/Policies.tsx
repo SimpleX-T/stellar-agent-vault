@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, Save, Plus, Trash2, ListChecks } from "lucide-react";
+import { ShieldCheck, Save, Plus, ListChecks } from "lucide-react";
 import { useWallet } from "../../hooks/useWallet";
 import { useToasts } from "../../hooks/useToasts";
 import { useFleet } from "../useFleet";
