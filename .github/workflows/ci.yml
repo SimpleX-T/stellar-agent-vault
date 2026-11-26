@@ -27,11 +27,12 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run contract tests
-        run: cargo test --workspace
-
+      # Build first: wallet-factory's tests contractimport! the agent_wallet wasm.
       - name: Build wasm (release)
         run: cargo build --workspace --target wasm32v1-none --release
+
+      - name: Run contract tests
+        run: cargo test --workspace
 
   web:
     name: Frontend — typecheck & build

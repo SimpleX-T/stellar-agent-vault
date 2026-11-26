@@ -5,9 +5,13 @@
 > limits); the agent may only spend **within** that policy. Every payout is an
 > inter-contract token transfer that emits an event, streamed live in the UI.
 
-Built for the **Stellar Journey to Mastery** program — a production MVP carried from the
-White belt through the **Green belt (Level 4)**: analytics, error monitoring, in-app feedback,
-and a public production deployment on top of the on-chain core.
+**[▶ Live app](https://stellar-agent-vault.vercel.app)** · **[Factory on Stellar Expert](https://stellar.expert/explorer/testnet/contract/CCZQRQXVI7OKH4JISBQASCFG65XIPT5RF4X7V52OHXO4Z54AY2UNBKTV)** · Stellar testnet · 20 contract tests passing
+
+Built for the **Stellar Journey to Mastery** program and submitted to **Build on Stellar**
+(Borderless). It's a production MVP with two on-chain designs: the original **SpendVault**
+(an allowance contract) and **AgentWallet** (a Soroban smart account). AgentWallet enforces
+the spending policy inside `__check_auth`, so the agent uses ordinary `token.transfer` and
+still can't go over budget.
 
 ---
 
@@ -27,6 +31,23 @@ SpendVault adds the missing primitive: **bounded autonomy**.
 
 When the agent tries to overspend, the contract rejects it (`BudgetExceeded` /
 `ProviderLimitExceeded`). The owner's funds are safe by construction.
+
+## Why Stellar
+
+The design depends on three properties of the network:
+
+- **Agents pay in tiny amounts, so fees decide whether this works.** An agent paying per API
+  call moves fractions of a cent at a time. Stellar's fees are sub-cent and predictable, so
+  enforcing a budget on every payment costs almost nothing. On a chain where each
+  transaction costs a dollar, the control layer would cost more than the payments it guards.
+- **Soroban custom accounts make the policy part of authorization.** With `__check_auth`,
+  a wallet decides for itself whether a signature is valid. AgentWallet uses that hook to
+  enforce its policy, so a transfer that breaks it never gets authorized in the first place.
+  The agent needs no special SDK: standard SAC `transfer` calls and normal Stellar tooling
+  just work.
+- **x402 already runs on Stellar.** Agents can already pay per request here. What's missing
+  is a limit on how much they can spend, and that's the layer this project adds on top of
+  a payment rail that already exists.
 
 ---
 
@@ -69,6 +90,36 @@ Errors: `NotInitialized`, `AlreadyInitialized`, `NotAuthorized`, `BudgetExceeded
 
 ---
 
+## AgentWallet: the smart-account version
+
+`contracts/agent-wallet` rewrites the core as a **Soroban custom account**. SpendVault
+requires the agent to call `pay()`. AgentWallet instead applies its policy in the
+**authorization path** of a standard `token.transfer`. The agent behaves like any other
+Stellar account, but a payment that breaks the policy never gets authorized.
+
+| Feature | How |
+|---------|-----|
+| Signer roles | `Admin` (the operator's wallet) and `Spender` (the agent's least-privilege key) |
+| Per-transfer cap | per token |
+| Rolling epoch cap | the counter is written inside `__check_auth` and resets on its own, with no keeper |
+| Recipient allowlist | optional; can be enforced per wallet |
+| Admin-only operations | adding signers or changing policy needs an `Admin` signature (`AdminRequired`) |
+
+Errors: `PerTransferExceeded`, `EpochCapExceeded`, `RecipientNotAllowed`, `UnknownSigner`,
+`AdminRequired`, `TokenDisabled`, …
+
+- **Gasless and non-custodial.** A relayer (`service/`) pays the fees but never signs, so the
+  agent holds no XLM. The operator signs admin actions in their own wallet
+  (`signAuthEntry`), and no server ever holds a spending key.
+- **`wallet-factory`** deploys wallets and keeps an on-chain registry
+  ([`CAORJEWA…DAGVN`](https://stellar.expert/explorer/testnet/contract/CAORJEWAANVZBBTB46T3MA6S6YZGHV5RYOKTVISTQ4T23QQDPOPDAGVN)).
+- **`service/src/prove.ts`** proves on testnet that allowed transfers settle and blocked
+  ones fail (per-transfer cap, epoch cap, allowlist).
+- **Operator console** (the live app): Overview, Agents, Policies, Activity and Keys pages,
+  and a provisioning flow that sets the policy when an agent is created.
+
+---
+
 ## Deployed (Stellar Testnet)
 
 | What | Address / hash |
@@ -76,11 +127,13 @@ Errors: `NotInitialized`, `AlreadyInitialized`, `NotAuthorized`, `BudgetExceeded
 | **SpendVault contract** (demo) | [`CDDIK44X…MQ5L`](https://stellar.expert/explorer/testnet/contract/CDDIK44X6QKACSGXJ37LKNLTOA3FAFYWMNICUP6MGVWRWHU7ZC4FMQ5L) |
 | **VaultFactory** (registry-enabled) | [`CCZQRQXV…BKTV`](https://stellar.expert/explorer/testnet/contract/CCZQRQXVI7OKH4JISBQASCFG65XIPT5RF4X7V52OHXO4Z54AY2UNBKTV) |
 | **Token (native XLM SAC)** | `CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC` |
+| SpendVault wasm hash | `3108e0d30fb237d57a089f0ad46e6e97062ba7c1ec6f32a3caf8f2ec64fdff9d` |
+| **AgentWallet WalletFactory** | [`CAORJEWA…DAGVN`](https://stellar.expert/explorer/testnet/contract/CAORJEWAANVZBBTB46T3MA6S6YZGHV5RYOKTVISTQ4T23QQDPOPDAGVN) |
+| AgentWallet wasm hash | `d5aab32dac58b76727b23b15ff6adf0f19c3ba9c0f44deb4c71ac589b16ee052` |
 
 > The factory exposes an on-chain **`all_vaults()`** registry (+ `admin()`) that backs the admin
 > dashboard — a complete vault list independent of RPC event retention. The earlier factory
 > (`CDWT4DES…J7S2`) remains valid on-chain as Level 1–3 belt evidence.
-| SpendVault wasm hash | `3108e0d30fb237d57a089f0ad46e6e97062ba7c1ec6f32a3caf8f2ec64fdff9d` |
 
 **Transaction hashes (verifiable on Stellar Explorer):**
 
@@ -139,7 +192,7 @@ covers settled value and policy state, which live only on-chain.
 Set the `VITE_*` vars from `.env.example` in the Vercel project (network + contract ids are
 required; the two observability keys are optional but recommended for the graded submission).
 
-**Live app:** `Add Vercel URL after first deploy`
+**Live app:** https://stellar-agent-vault.vercel.app
 
 ## Run locally
 
@@ -186,17 +239,6 @@ pnpm dev
 
 ![PostHog dashboard](docs/analytics.png)
 
-<!-- Capture for the checklist: -->
-- Wallet connected state — _add screenshot with Freighter connected_
-- Successful testnet transaction + result toast — _add screenshot after sending XLM / funding the vault_
-- PostHog dashboard showing events + identified wallets — _docs/analytics.png_
-- Sentry issues stream (or "no issues") — _optional_
-
-## Demo video
-
-<!-- Level 3: 1–2 min walkthrough -->
-`Add link (Loom / YouTube unlisted)`
-
 ---
 
 ## How it relates to x402
@@ -211,7 +253,9 @@ every per-request payment.
 
 ## Tech
 
-- **Contracts:** Rust / Soroban (`soroban-sdk 25`), 8 unit tests, epoch-windowed budgeting.
+- **Contracts:** Rust / Soroban (`soroban-sdk 25`): spend-vault, vault-factory, agent-wallet
+  (custom account), wallet-factory. 20 unit tests, including real ed25519 `__check_auth` policy paths.
+- **Service:** TypeScript relayer + testnet proof scripts (`service/`).
 - **Frontend:** Vite + React + TypeScript, `@stellar/stellar-sdk`, StellarWalletsKit.
 - **CI:** GitHub Actions — contract tests + wasm build + frontend typecheck/build (`.github/workflows/ci.yml`).
 
@@ -227,7 +271,7 @@ every per-request payment.
 | Yellow | Real-time events / status | `web/src/components/ActivityFeed.tsx`, toasts |
 | Yellow | 3+ error types handled | `web/src/lib/errors.ts` |
 | Orange | Advanced contract + inter-contract | `pay` → SAC, `VaultFactory.create_vault` |
-| Orange | Tests | `contracts/spend-vault/src/test.rs` (8 passing) |
+| Orange | Tests | `contracts/*/src/test.rs` (20 passing) |
 | Orange | CI/CD | `.github/workflows/ci.yml` |
 | Orange | Mobile responsive | `docs/mobile.png` |
 
@@ -241,12 +285,11 @@ every per-request payment.
 | Monitoring + analytics integration | ✅ | PostHog + Sentry (`lib/analytics.ts`, `lib/monitoring.ts`) |
 | On-chain operator dashboard | ✅ | `components/AdminDashboard.tsx` + factory `all_vaults()` |
 | In-app feedback collection | ✅ | `components/FeedbackWidget.tsx` |
-| Production deployment | ⏳ | Vercel (`web/vercel.json`) — _add live URL_ |
+| Production deployment | ✅ | https://stellar-agent-vault.vercel.app |
 | 10+ real users + wallet-interaction proof | ⏳ | PostHog "identified users" export — _in progress_ |
 | Basic user feedback summary | ⏳ | PostHog `feedback_submitted` events — _in progress_ |
 | 15+ meaningful commits | ✅ | `git log` |
 | Public GitHub repo | ✅ | this repo |
-| Demo video | ⏳ | _add link_ |
 
 ## Run the deployment workflow
 
